@@ -1,0 +1,3 @@
+[submodule "demo/MCP-Bridge"]
+	path = demo/MCP-Bridge
+	url = https://github.com/SecretiveShell/MCP-Bridge.git
