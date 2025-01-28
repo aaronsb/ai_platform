@@ -1,0 +1,55 @@
+{
+    "inference_server": {
+        "base_url": "http://localhost:8000/v1",
+        "api_key": "None"
+    },
+    "sampling": {
+        "timeout": 10,
+        "models": [
+            {
+                "model": "gpt-4",
+                "intelligence": 0.8,
+                "cost": 0.9,
+                "speed": 0.3
+            },
+            {
+                "model": "gpt-3.5-turbo",
+                "intelligence": 0.6,
+                "cost": 0.2,
+                "speed": 0.8
+            }
+        ]
+    },
+    "mcp_servers": {
+        "local-example": {
+            "command": "node",
+            "args": ["/path/to/your/mcp/build/index.js"],
+            "env": {
+                "API_KEY": "your-api-key"
+            }
+        },
+        "docker-example": {
+            "image": "username/mcp-server:latest",
+            "env": {
+                "API_KEY": "your-api-key"
+            }
+        },
+        "npm-example": {
+            "command": "npx",
+            "args": ["@username/mcp-package"],
+            "env": {
+                "API_KEY": "your-api-key"
+            }
+        },
+        "sse-example": {
+            "url": "http://localhost:8000/mcp-server/sse"
+        }
+    },
+    "network": {
+        "host": "0.0.0.0",
+        "port": 9090
+    },
+    "logging": {
+        "log_level": "DEBUG"
+    }
+}

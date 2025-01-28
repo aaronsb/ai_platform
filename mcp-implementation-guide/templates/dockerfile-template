@@ -1,0 +1,54 @@
+# Multi-stage build for optimized MCP server image
+FROM node:18-slim as builder
+
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Install dependencies
+RUN npm ci
+
+# Copy source code
+COPY . .
+
+# Build the application
+RUN npm run build
+
+# Production stage
+FROM node:18-slim
+
+WORKDIR /app
+
+# Copy package files and install production dependencies
+COPY package*.json ./
+RUN npm ci --only=production
+
+# Copy built application from builder stage
+COPY --from=builder /app/build ./build
+
+# Set executable permissions
+RUN chmod +x build/index.js
+
+# Create non-root user
+RUN useradd -r -u 1001 -g root mcp-user
+USER mcp-user
+
+# Set environment variables
+ENV NODE_ENV=production
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD node -e "process.exit(0)"
+
+# Command to run the server
+CMD ["node", "build/index.js"]
+
+# Labels for documentation
+LABEL org.opencontainers.image.source="https://github.com/username/mcp-server" \
+      org.opencontainers.image.description="MCP Server Implementation" \
+      org.opencontainers.image.licenses="MIT"
+
+# Build-time arguments for versioning
+ARG VERSION=latest
+LABEL org.opencontainers.image.version=$VERSION

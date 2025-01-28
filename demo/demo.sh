@@ -32,20 +32,20 @@ run_command() {
 
 # Help Section
 show_title "SHOWING HELP INFORMATION"
-run_command "../deploy-ai-platform.sh --help"
+run_command "./deploy-ai-platform.sh --help"
 
 # Dry Run Section
 show_title "PERFORMING DRY RUN"
-run_command "../deploy-ai-platform.sh --dry-run"
+run_command "./deploy-ai-platform.sh --dry-run"
 
 # Clean Deploy Section
 show_title "PERFORMING CLEAN DEPLOYMENT"
-run_command "../deploy-ai-platform.sh --clean --confirm"
+run_command "./deploy-ai-platform.sh --clean --confirm"
 
 # Standard Deploy Section
 show_title "PERFORMING STANDARD DEPLOYMENT"
-run_command "../deploy-ai-platform.sh --confirm"
+run_command "./deploy-ai-platform.sh --confirm"
 
 # Dispose Section
 show_title "DISPOSING ALL RESOURCES"
-run_command "../deploy-ai-platform.sh --dispose"
+run_command "./deploy-ai-platform.sh --dispose"
