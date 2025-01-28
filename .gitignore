@@ -24,6 +24,9 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
+# Demo Data
+*.cast
+
 # Runtime data
 pids/
 *.pid
@@ -33,6 +36,7 @@ pids/
 # Dependency directories
 node_modules/
 vendor/
+mcp-staging/
 
 # Build output
 dist/

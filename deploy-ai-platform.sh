@@ -102,6 +102,10 @@ cleanup_deployment() {
     log "Stopping MCP Bridge related containers..." "info"
     docker compose down || true
     
+    # Remove the external volume
+    log "Removing external volume..." "info"
+    docker volume rm mcp-bridge-mcps || true
+    
     if [ "$clean_type" = "dispose" ]; then
         # Full disposal - remove everything including downloaded files
         log "Removing all MCP Bridge resources..." "info"
@@ -307,6 +311,10 @@ cat > bridge-config/config.json << EOF
   }
 }
 EOF
+
+# Create external volume
+log "Creating external volume..." "info"
+docker volume create mcp-bridge-mcps || true
 
 log "Setting up MCP staging area..." "info"
 mkdir -p mcp-staging
