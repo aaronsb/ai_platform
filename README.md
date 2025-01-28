@@ -1,5 +1,85 @@
 # AI Platform Deployment Tool
 
+## Architecture
+
+### Service Architecture
+```mermaid
+graph TB
+    subgraph AI_Platform["AI Platform"]
+        O[Ollama]
+        W[Open WebUI]
+        P[Pipelines]
+        M[MCP Bridge]
+        WT[Watchtower]
+        
+        W -->|depends on| O
+        W -.->|interacts| P
+        W -.->|interacts| M
+        WT -->|monitors| O
+        WT -->|monitors| W
+        WT -->|monitors| P
+        WT -->|monitors| M
+    end
+
+    subgraph Hardware["Hardware Resources"]
+        GPU[NVIDIA GPU]
+    end
+    
+    O -.->|utilizes| GPU
+```
+
+### Volume Mapping
+```mermaid
+graph LR
+    subgraph Containers
+        O[Ollama]
+        W[Open WebUI]
+        P[Pipelines]
+        M[MCP Bridge]
+    end
+
+    subgraph Persistent_Volumes["Persistent Volumes"]
+        OV[ollama volume<br>/root/.ollama]
+        WV[open-webui volume<br>/app/backend/data]
+        PV[pipelines volume<br>/app/pipelines]
+        MV[mcp-bridge-mcps volume<br>/mcp_bridge/mcps]
+        MC[mcp config<br>config.json]
+    end
+
+    O -->|mounts| OV
+    W -->|mounts| WV
+    P -->|mounts| PV
+    M -->|mounts| MV
+    M -->|mounts| MC
+```
+
+### Network Architecture
+```mermaid
+graph TB
+    subgraph Host_Network["Host Network Mode"]
+        O[Ollama<br>Default Ports]
+        W[Open WebUI<br>Default Ports]
+        P[Pipelines<br>Default Ports]
+        M[MCP Bridge<br>Default Ports]
+    end
+
+    subgraph Host_Machine["Host Machine"]
+        Apps[Applications]
+        D[Docker Socket]
+    end
+
+    W -->|communicates| O
+    Apps -->|access| W
+    Apps -->|access| P
+    Apps -->|access| M
+    
+    subgraph Watchtower["Watchtower Service"]
+        WT[Watchtower]
+    end
+    
+    WT -->|monitors via| D
+```
+
 A deployment script for managing the AI Platform infrastructure, including MCP Bridge and associated MCP servers.
 
 ## Features
@@ -78,3 +158,15 @@ If you encounter permission issues, follow these steps:
 3. Log out and back in for changes to take effect
 
 For more details, see the [Docker post-installation steps](https://docs.docker.com/engine/install/linux-postinstall/).
+
+## Contributing
+
+We welcome contributions to the AI Platform! Please read our [Contributing Guidelines](CONTRIBUTING.md) and [Developer Guidelines](DEVELOPER.md) for details on our code of conduct and the process for submitting pull requests.
+
+## Development
+
+For detailed information about development practices, coding standards, testing procedures, and more, please refer to our [Developer Guidelines](DEVELOPER.md).
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
