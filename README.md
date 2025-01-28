@@ -13,8 +13,8 @@ graph TB
         WT[Watchtower]
         
         W -->|depends on| O
+        W -->|OpenAI API proxy| M
         W -.->|interacts| P
-        W -.->|interacts| M
         WT -->|monitors| O
         WT -->|monitors| W
         WT -->|monitors| P
@@ -27,6 +27,10 @@ graph TB
     
     O -.->|utilizes| GPU
 ```
+
+The MCP Bridge provides a REST API endpoint that allows managing MCP servers and their configurations. This endpoint is typically consumed by local AI platforms like OpenWebUI through an OpenAI API proxy interface:
+
+![MCP Bridge REST Endpoint](mcp-bridge-rest-endpoint-screenshot.jpg)
 
 ### Volume Mapping
 ```mermaid
@@ -87,6 +91,8 @@ A deployment script for managing the AI Platform infrastructure, including MCP B
 ## Demo
 
 ![AI Platform Deployment Demo](demo.gif)
+
+The MCP Bridge exposes a REST API that allows managing MCP servers and their configurations. Local AI platforms like OpenWebUI can then consume the MCP Bridge as an OpenAI API proxy, enabling seamless integration of MCP capabilities with existing AI workflows.
 
 ## Features
 
