@@ -1,0 +1,71 @@
+services:
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    network_mode: "host"
+    volumes:
+      - ollama:/root/.ollama
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    restart: unless-stopped
+
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:cuda
+    container_name: open-webui
+    network_mode: "host"
+    volumes:
+      - open-webui:/app/backend/data
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - ollama
+    restart: unless-stopped
+
+  pipelines:
+    image: ghcr.io/open-webui/pipelines:main
+    container_name: pipelines
+    network_mode: "host"
+    volumes:
+      - pipelines:/app/pipelines
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+
+  mcp-bridge:
+    build:
+      context: ./MCP-Bridge
+    container_name: mcp-bridge
+    network_mode: "host"
+    volumes:
+      - ./config.json:/mcp_bridge/config.json
+      - mcp-bridge-mcps:/mcp_bridge/mcps
+    restart: unless-stopped
+
+  watchtower:
+    image: containrrr/watchtower:latest
+    container_name: watchtower
+    network_mode: "host"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - WATCHTOWER_CLEANUP=true
+      - WATCHTOWER_SCHEDULE=0 0 4 * * *
+    restart: unless-stopped
+
+volumes:
+  ollama:
+    name: ollama
+  open-webui:
+    name: open-webui
+  pipelines:
+    name: pipelines
+  mcp-bridge-config:
+    name: mcp-bridge-config
+  mcp-bridge-mcps:
+    name: mcp-bridge-mcps
+    external: true
