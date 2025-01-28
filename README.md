@@ -43,14 +43,16 @@ graph LR
         WV[open-webui volume<br>/app/backend/data]
         PV[pipelines volume<br>/app/pipelines]
         MV[mcp-bridge-mcps volume<br>/mcp_bridge/mcps]
-        MC[mcp config<br>config.json]
+        BC[bridge-config<br>/bridge-config/config.json]
+        MS[mcp-staging<br>MCP configurations]
     end
 
     O -->|mounts| OV
     W -->|mounts| WV
     P -->|mounts| PV
     M -->|mounts| MV
-    M -->|mounts| MC
+    M -->|mounts| BC
+    MS -.->|"loaded via REST"| M
 ```
 
 ### Network Architecture
@@ -88,6 +90,8 @@ A deployment script for managing the AI Platform infrastructure, including MCP B
 
 ## Features
 
+- **Separated Configuration**: Bridge configuration and MCP server configurations are kept separate
+- **MCP Staging Area**: MCP configurations are staged locally for loading via REST interface
 - **Clean Deployments**: Option to perform fresh deployments by removing existing volumes
 - **Quiet Mode**: Redirect output to timestamped log files (useful for coding agents)
 - **Resource Management**: Easy cleanup of containers and volumes
@@ -119,6 +123,28 @@ A deployment script for managing the AI Platform infrastructure, including MCP B
 - `--repo-url URL`: URL of the MCP Bridge repository
 - `--settings-file FILE`: Path to the MCP settings file
 - `--help`: Display help message
+
+### Configuration Structure
+
+The deployment uses a two-part configuration approach:
+
+1. **Bridge Configuration** (`bridge-config/config.json`):
+   - Basic bridge settings like inference server configuration
+   - Mounted directly into the container
+   - Example:
+     ```json
+     {
+       "inference_server": {
+         "base_url": "http://localhost:11434/v1",
+         "api_key": "None"
+       }
+     }
+     ```
+
+2. **MCP Configurations** (`mcp-staging/`):
+   - Contains MCP server configurations copied from source directory
+   - Available for loading via REST interface after deployment
+   - Keeps API keys and server configurations separate from bridge settings
 
 ### Default Values
 

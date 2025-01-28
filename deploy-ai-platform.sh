@@ -105,28 +105,9 @@ cleanup_deployment() {
     if [ "$clean_type" = "dispose" ]; then
         # Full disposal - remove everything including downloaded files
         log "Removing all MCP Bridge resources..." "info"
-        rm -rf MCP-Bridge Dockerfile config.json
+        rm -rf MCP-Bridge Dockerfile bridge-config mcp-staging
     fi
     
-    log "Removing MCP volume..." "info"
-    # Try normal removal first
-    if ! docker volume rm mcp-bridge-mcps 2>/dev/null; then
-        log "Volume in use, forcing removal..." "warning"
-        # Get container IDs using the volume
-        containers=$(docker ps -a --filter volume=mcp-bridge-mcps --format "{{.ID}}")
-        if [ -n "$containers" ]; then
-            log "Stopping containers using the volume..." "info"
-            echo "$containers" | xargs docker rm -f
-        fi
-        # Try volume removal again
-        docker volume rm mcp-bridge-mcps || true
-    fi
-    
-    if [ "$clean_type" = "clean" ]; then
-        # Clean deployment - ensure volume is recreated
-        log "Creating fresh MCP volume..." "info"
-        docker volume create mcp-bridge-mcps
-    fi
 }
 
 # Function to show deployment plan
@@ -139,17 +120,13 @@ show_plan() {
     log "Clean Deployment: $([ "$CLEAN_DEPLOY" = true ] && echo "Yes" || echo "No")" "info"
     log "Quiet Mode: $([ "$QUIET_MODE" = true ] && echo "Yes" || echo "No")" "info"
     echo
+    log "Actions to be performed:" "header"
     if [ "$CLEAN_DEPLOY" = true ]; then
-        log "Actions to be performed:" "header"
         log "1. Stop and remove existing containers" "info"
-        log "2. Remove existing MCP volume" "info"
-    else
-        log "Actions to be performed:" "header"
-        log "1. Reuse existing volume if present" "info"
     fi
     log "2. Clone repository from: $REPO_URL" "info"
-    log "3. Copy MCP files from: $MCP_SRC_DIR" "info"
-    log "4. Use settings from: $SETTINGS_FILE" "info"
+    log "3. Set up bridge configuration" "info"
+    log "4. Stage MCP configurations from: $MCP_SRC_DIR" "info"
     log "5. Build and start containers" "info"
     echo
 }
@@ -161,11 +138,11 @@ show_usage() {
     log "Usage: $0 [options]" "header"
     echo
     log "Options:" "header"
-    log "  --clean              Perform a clean deployment (removes existing volumes)" "info"
+    log "  --clean              Perform a clean deployment (stops containers and rebuilds)" "info"
     log "  --quiet             Run in quiet mode, redirecting all output to a timestamped log file" "info"
     log "                      This is useful for coding agents to avoid verbose output" "info"
     log "                      Default: Display all output to terminal" "info"
-    log "  --dispose           Remove all MCP Bridge containers and volumes without deploying" "info"
+    log "  --dispose           Remove all MCP Bridge resources without deploying" "info"
     log "  --confirm           Use default values and proceed with deployment" "info"
     log "  --dry-run           Show what would happen without making any changes" "info"
     log "  --mcp-src-dir DIR   Directory containing MCP server source code" "info"
@@ -295,24 +272,12 @@ fi
 
 # Handle clean deployment
 if [ "$CLEAN_DEPLOY" = true ]; then
-    show_warning_and_confirm "clean deployment (removing existing volumes and re-downloading sources)"
+    show_warning_and_confirm "clean deployment (stopping containers and rebuilding from scratch)"
     cleanup_deployment "clean"
-elif docker volume ls | grep -q "mcp-bridge-mcps"; then
-    if [ "$CONFIRMED" = true ]; then
-        log "Reusing existing MCP volume and resources..." "info"
-        # Quick health check of existing deployment
-        if docker ps -a | grep -q "mcp-bridge.*Exited"; then
-            log "Previous deployment appears to have failed!" "error"
-            log "It is recommended to run with --clean flag for a fresh deployment" "info"
-            exit 1
-        fi
-    else
-        log "MCP volume already exists!" "warning"
-        log "This deployment will reuse the existing volume." "warning"
-        log "Use --clean flag for a fresh deployment that removes existing volumes." "warning"
-        log "Continuing in 10 seconds..." "warning"
-        sleep 10
-    fi
+elif docker ps -a | grep -q "mcp-bridge.*Exited"; then
+    log "Previous deployment appears to have failed!" "error"
+    log "It is recommended to run with --clean flag for a fresh deployment" "info"
+    exit 1
 fi
 
 log "Cleaning up old repository..." "info"
@@ -324,22 +289,34 @@ git clone $REPO_URL
 log "Copying Dockerfile..." "info"
 cp MCP-Bridge/Dockerfile .
 
-log "Copying MCP settings file..." "info"
-cp "$SETTINGS_FILE" config.json
+log "Cleaning up existing bridge configuration..." "info"
+rm -rf bridge-config
 
-# Create volume and copy MCPs if needed
-log "Setting up MCP volume..." "info"
-docker volume create mcp-bridge-mcps >/dev/null 2>&1 || true
+log "Setting up bridge configuration..." "info"
+if [ -d "bridge-config/config.json" ]; then
+    log "Removing incorrectly created config.json directory..." "info"
+    rm -rf bridge-config/config.json
+fi
+mkdir -p bridge-config
+log "Creating default bridge configuration..." "info"
+cat > bridge-config/config.json << EOF
+{
+  "inference_server": {
+    "base_url": "http://localhost:11434/v1",
+    "api_key": "None"
+  }
+}
+EOF
 
-if [ "$CLEAN_DEPLOY" = true ]; then
-    log "Copying fresh MCP files to volume..." "info"
-    docker run --rm -v mcp-bridge-mcps:/mcps alpine rm -rf /mcps/*
-    docker cp "$MCP_SRC_DIR/." $(docker create --rm -v mcp-bridge-mcps:/mcps alpine):/mcps/
-elif ! docker run --rm -v mcp-bridge-mcps:/mcps alpine test -d /mcps/mcp_bridge; then
-    log "No existing MCP files found in volume, copying..." "info"
-    docker cp "$MCP_SRC_DIR/." $(docker create --rm -v mcp-bridge-mcps:/mcps alpine):/mcps/
+log "Setting up MCP staging area..." "info"
+mkdir -p mcp-staging
+if [ -d "$MCP_SRC_DIR" ] && [ -n "$(ls -A "$MCP_SRC_DIR")" ]; then
+    log "Copying MCP configurations from $MCP_SRC_DIR..." "info"
+    rm -rf mcp-staging/*
+    cp -r "$MCP_SRC_DIR"/* mcp-staging/
 else
-    log "Using existing MCP files in volume..." "info"
+    log "No MCP configurations found in $MCP_SRC_DIR" "warning"
+    log "You can add MCP configurations to mcp-staging/ and load them via REST interface" "info"
 fi
 
 # Build and start the stack
@@ -367,3 +344,4 @@ if [ "$QUIET_MODE" = true ]; then
     log "Deployment complete. Log file is available at: $LOG_FILE" "success"
 fi
 rm -rf MCP-Bridge Dockerfile
+log "Note: MCP configurations are available in mcp-staging/ for loading via REST interface" "info"

@@ -42,7 +42,7 @@ services:
     container_name: mcp-bridge
     network_mode: "host"
     volumes:
-      - ./config.json:/mcp_bridge/config.json
+      - ./bridge-config/config.json:/mcp_bridge/config.json
       - mcp-bridge-mcps:/mcp_bridge/mcps
     restart: unless-stopped
 
@@ -64,8 +64,6 @@ volumes:
     name: open-webui
   pipelines:
     name: pipelines
-  mcp-bridge-config:
-    name: mcp-bridge-config
   mcp-bridge-mcps:
     name: mcp-bridge-mcps
     external: true
