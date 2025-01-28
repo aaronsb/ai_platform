@@ -1,0 +1,195 @@
+# AI Agent Development Guidelines (.clinerules)
+
+## Purpose
+This document outlines development practices optimized for AI coding agents while maintaining compatibility with human developer workflows. These guidelines prioritize clarity, predictability, and maintainability in automated code contributions.
+
+## Commit Standards
+
+### Commit Message Structure
+AI agents should format commit messages following this pattern:
+```
+[scope] Action: detailed description
+
+- Context about the change
+- Reasoning for the approach taken
+- Any notable trade-offs considered
+```
+
+Example:
+```
+[auth] Add OAuth2 token refresh mechanism
+
+- Implements RFC 6749 compliant refresh flow
+- Chose synchronous refresh over background due to simplicity
+- Considered but rejected token caching for initial implementation
+```
+
+### Commit Sizing
+- Each commit should represent one logical change
+- Changes should be atomic and independently reviewable
+- If a change requires more than 400 lines, split it into smaller, logical commits
+- When splitting commits, maintain a clear dependency order
+
+## Code Organization
+
+### File Structure
+- Group related files by feature rather than type
+- Maintain a maximum file size of 300 lines
+- Split files when they exceed this limit or handle multiple concerns
+- Include a brief header comment explaining the file's purpose
+
+### Component Design
+- Follow the Rule of Three: Abstract only when you have three similar implementations
+- Prefer composition over inheritance
+- Keep component interfaces minimal and focused
+- Document component boundaries and interactions
+
+## Documentation Practices
+
+### Code Comments
+AI agents should provide:
+- Purpose comments at file level
+- Interface documentation for public APIs
+- Decision records for non-obvious implementation choices
+- Example usage in doc comments for complex functions
+
+Example:
+```python
+def retry_with_backoff(max_attempts: int, base_delay: float) -> Callable:
+    """
+    Implements exponential backoff retry logic.
+    
+    Chosen approach:
+    - Uses exponential backoff to prevent thundering herd
+    - Adds jitter to avoid synchronization
+    - Caps maximum delay to prevent excessive waits
+    
+    Example:
+        @retry_with_backoff(max_attempts=3, base_delay=1.0)
+        def fetch_data():
+            return api.get_data()
+    """
+```
+
+### Change Documentation
+Each significant change should include:
+- Clear explanation of the problem being solved
+- Rationale for the chosen approach
+- Performance implications if relevant
+- Migration steps if breaking existing patterns
+
+## Branch Management
+
+### Branch Naming
+Follow the pattern:
+```
+type/scope/description
+```
+Examples:
+- feature/auth/oauth-refresh
+- fix/api/rate-limit-handling
+- refactor/db/connection-pooling
+
+### Branch Lifecycle
+- Create branches for specific, well-defined changes
+- Keep branches short-lived (target 1-2 days maximum)
+- Rebase frequently to maintain clean history
+- Delete branches promptly after merging
+
+## Merge Practices
+
+### Pre-merge Checklist
+AI agents should verify:
+- All tests pass
+- Code meets style guidelines
+- No mixing of unrelated changes
+- Documentation is updated
+- Breaking changes are clearly marked
+
+### Merge Strategy
+- Prefer rebase and merge over merge commits
+- Ensure linear history when possible
+- Squash commits if they represent one logical change
+- Include references to related issues/tickets
+
+## Testing Guidelines
+
+### Test Structure
+- Write tests before implementing features
+- Maintain test independence
+- Group tests by behavior, not implementation
+- Include both happy path and error cases
+
+### Test Coverage
+- Aim for high coverage of business logic
+- Focus on behavior over implementation details
+- Include integration tests for critical paths
+- Document test scenarios and assumptions
+
+## Error Handling
+
+### Error Patterns
+- Use explicit error types
+- Provide context in error messages
+- Handle errors at appropriate levels
+- Log relevant debugging information
+
+Example:
+```python
+try:
+    result = process_data(input_data)
+except ValidationError as e:
+    logger.error(f"Data validation failed: {e.details}")
+    raise BusinessError("Invalid input format", context=e.details)
+except ProcessingError as e:
+    logger.error(f"Processing failed: {e}")
+    raise
+```
+
+## Performance Considerations
+
+### Optimization Guidelines
+- Profile before optimizing
+- Document performance requirements
+- Include benchmark results in comments
+- Consider resource constraints
+
+Example comment:
+```python
+# Performance notes:
+# - Current implementation: O(n log n)
+# - Memory usage: O(n)
+# - Benchmarked with 1M records: 1.2s processing time
+# - Alternative approaches considered:
+#   * Hash-based: O(n) time but O(n) space
+#   * Stream processing: O(n) time but higher latency
+```
+
+## Version Control Integration
+
+### Automated Checks
+AI agents should automatically:
+- Run linters before committing
+- Verify commit message format
+- Check for sensitive data
+- Validate documentation updates
+
+### Change Detection
+- Monitor for breaking changes
+- Flag dependency updates
+- Identify performance regressions
+- Track technical debt indicators
+
+## Best Practices for AI-Human Collaboration
+
+### Communication Patterns
+- Clear indication of AI-generated changes
+- Explicit documentation of assumptions
+- References to relevant documentation
+- Highlight areas needing human review
+
+### Review Process
+- Request specific human input when needed
+- Mark uncertainty in implementation choices
+- Provide alternative approaches considered
+- Include relevant metrics and benchmarks

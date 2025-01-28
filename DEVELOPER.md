@@ -2,6 +2,8 @@
 
 This document provides guidelines and best practices for developers working on the AI Platform project. These guidelines incorporate and extend the AI-specific development practices defined in our `.clinerules` file.
 
+Since this document is likely to be read by agentic coding agents as well as regular humans, it's a bit more verbose than normal. For those humans reading this, it's ok to gloss over some stuff - there won't be a test at the end of this book.
+
 ## AI Development Practices
 
 This project follows specific guidelines optimized for AI coding agents while maintaining compatibility with human developer workflows. These practices are defined in our `.clinerules` file and prioritize:
