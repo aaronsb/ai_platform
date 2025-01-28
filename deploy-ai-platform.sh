@@ -96,9 +96,17 @@ show_warning_and_confirm() {
 
 # Function to cleanup containers and volumes
 cleanup_deployment() {
+    local clean_type="$1"
     show_warning_and_confirm "cleanup"
+    
     log "Stopping MCP Bridge related containers..." "info"
     docker compose down || true
+    
+    if [ "$clean_type" = "dispose" ]; then
+        # Full disposal - remove everything including downloaded files
+        log "Removing all MCP Bridge resources..." "info"
+        rm -rf MCP-Bridge Dockerfile config.json
+    fi
     
     log "Removing MCP volume..." "info"
     # Try normal removal first
@@ -112,6 +120,12 @@ cleanup_deployment() {
         fi
         # Try volume removal again
         docker volume rm mcp-bridge-mcps || true
+    fi
+    
+    if [ "$clean_type" = "clean" ]; then
+        # Clean deployment - ensure volume is recreated
+        log "Creating fresh MCP volume..." "info"
+        docker volume create mcp-bridge-mcps
     fi
 }
 
@@ -232,6 +246,7 @@ while [[ "$#" -gt 0 ]]; do
                 exit 1
             fi
             ;;
+        --help) show_usage ;;
         *) log "Unknown parameter: $1" "error"; exit 1 ;;
     esac
     shift
@@ -260,24 +275,44 @@ if [ "$QUIET_MODE" = true ]; then
     log "Log file location: $LOG_FILE" "info"
 fi
 
+# Function to check deployment health
+check_deployment_health() {
+    # Check if containers are running properly
+    if ! docker compose ps | grep -q "Up" || ! docker ps | grep -q "mcp-bridge"; then
+        log "Deployment appears to be unhealthy!" "error"
+        log "Try running with --clean flag to perform a fresh deployment" "info"
+        exit 1
+    fi
+}
+
 # Handle dispose flag
 if [ "$DISPOSE_ONLY" = true ]; then
     show_warning_and_confirm "disposal of all MCP Bridge resources"
-    cleanup_deployment
+    cleanup_deployment "dispose"
     log "MCP Bridge disposal complete!" "success"
     exit 0
 fi
 
 # Handle clean deployment
 if [ "$CLEAN_DEPLOY" = true ]; then
-    show_warning_and_confirm "clean deployment (removing existing volumes)"
-    cleanup_deployment
+    show_warning_and_confirm "clean deployment (removing existing volumes and re-downloading sources)"
+    cleanup_deployment "clean"
 elif docker volume ls | grep -q "mcp-bridge-mcps"; then
-    log "MCP volume already exists!" "warning"
-    log "This deployment will reuse the existing volume." "warning"
-    log "Use --clean flag for a fresh deployment that removes existing volumes." "warning"
-    log "Continuing in 10 seconds..." "warning"
-    sleep 10
+    if [ "$CONFIRMED" = true ]; then
+        log "Reusing existing MCP volume and resources..." "info"
+        # Quick health check of existing deployment
+        if docker ps -a | grep -q "mcp-bridge.*Exited"; then
+            log "Previous deployment appears to have failed!" "error"
+            log "It is recommended to run with --clean flag for a fresh deployment" "info"
+            exit 1
+        fi
+    else
+        log "MCP volume already exists!" "warning"
+        log "This deployment will reuse the existing volume." "warning"
+        log "Use --clean flag for a fresh deployment that removes existing volumes." "warning"
+        log "Continuing in 10 seconds..." "warning"
+        sleep 10
+    fi
 fi
 
 log "Cleaning up old repository..." "info"
@@ -292,12 +327,16 @@ cp MCP-Bridge/Dockerfile .
 log "Copying MCP settings file..." "info"
 cp "$SETTINGS_FILE" config.json
 
-# Create volume and copy MCPs
+# Create volume and copy MCPs if needed
 log "Setting up MCP volume..." "info"
-docker volume create mcp-bridge-mcps
-if [ "$CLEAN_DEPLOY" = true ] || ! docker run --rm -v mcp-bridge-mcps:/mcps alpine test -d /mcps/mcp_bridge; then
-    log "Copying MCP files to volume..." "info"
+docker volume create mcp-bridge-mcps >/dev/null 2>&1 || true
+
+if [ "$CLEAN_DEPLOY" = true ]; then
+    log "Copying fresh MCP files to volume..." "info"
     docker run --rm -v mcp-bridge-mcps:/mcps alpine rm -rf /mcps/*
+    docker cp "$MCP_SRC_DIR/." $(docker create --rm -v mcp-bridge-mcps:/mcps alpine):/mcps/
+elif ! docker run --rm -v mcp-bridge-mcps:/mcps alpine test -d /mcps/mcp_bridge; then
+    log "No existing MCP files found in volume, copying..." "info"
     docker cp "$MCP_SRC_DIR/." $(docker create --rm -v mcp-bridge-mcps:/mcps alpine):/mcps/
 else
     log "Using existing MCP files in volume..." "info"
@@ -317,6 +356,8 @@ else
     docker compose up -d mcp-bridge
 fi
 
+# Final health check
+check_deployment_health
 log "MCP Bridge deployment complete!" "success"
 
 # Cleanup

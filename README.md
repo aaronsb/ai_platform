@@ -82,6 +82,10 @@ graph TB
 
 A deployment script for managing the AI Platform infrastructure, including MCP Bridge and associated MCP servers.
 
+## Demo
+
+![AI Platform Deployment Demo](demo.gif)
+
 ## Features
 
 - **Clean Deployments**: Option to perform fresh deployments by removing existing volumes
