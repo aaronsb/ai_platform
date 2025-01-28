@@ -109,7 +109,7 @@ The MCP Bridge exposes a REST API that allows managing MCP servers and their con
 ## Prerequisites
 
 - Docker installed and configured for non-root usage
-- Git for cloning repositories
+- Git for cloning repositories (use `git clone --recurse-submodules` to include MCP-Bridge submodule)
 - Access to required MCP servers and source code
 
 ## Usage
